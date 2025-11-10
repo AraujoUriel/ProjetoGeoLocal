@@ -11,32 +11,35 @@ import {
 export default class Cadastro extends Component {
   state = {
     nome: "",
-    email: "",
     password: "",
-    telefone: "",
-    CPF: "",
-    curso: "",
+    cep: "",
+    rua: "",
+    bairro: "",
+    cidade: "",
+    numero: "",
   };
 
   handleCadastro = async () => {
-    const { email, password, nome, telefone, CPF, curso } = this.state;
-    if (!email || !password || !nome || !telefone || !CPF || !curso) {
+    const { nome, password, cep, rua, bairro, cidade, numero } = this.state;
+    if (!nome || !password || !cep || !rua || !bairro || !cidade || !numero) {
       alert("Preencha todos os campos!");
       return;
     }
     const user = {
       nome,
-      email,
       password,
-      telefone,
-      CPF,
-      curso,
+      cep,
+      rua,
+      bairro,
+      cidade,
+      numero,
     };
 
     await AsyncStorage.setItem("user", JSON.stringify(user));
     alert("Usuário cadastrado com sucesso!");
     this.props.navigation.navigate("Login");
   };
+
   render() {
     return (
       <View style={styles.container}>
@@ -45,14 +48,7 @@ export default class Cadastro extends Component {
           placeholder="Nome"
           value={this.state.nome}
           onChangeText={(nome) => this.setState({ nome })}
-          placeholderTextColor="#ffffff8c"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          value={this.state.email}
-          onChangeText={(email) => this.setState({ email })}
-          placeholderTextColor="#ffffff8c"
+          placeholderTextColor="#666"
         />
         <TextInput
           style={styles.input}
@@ -60,28 +56,42 @@ export default class Cadastro extends Component {
           value={this.state.password}
           secureTextEntry={true}
           onChangeText={(password) => this.setState({ password })}
-          placeholderTextColor="#ffffff8c"
+          placeholderTextColor="#666"
         />
         <TextInput
           style={styles.input}
-          placeholder="Telefone"
-          value={this.state.telefone}
-          onChangeText={(telefone) => this.setState({ telefone })}
-          placeholderTextColor="#ffffff8c"
+          placeholder="CEP"
+          value={this.state.cep}
+          onChangeText={(cep) => this.setState({ cep })}
+          placeholderTextColor="#666"
         />
         <TextInput
           style={styles.input}
-          placeholder="CPF"
-          value={this.state.CPF}
-          onChangeText={(CPF) => this.setState({ CPF })}
-          placeholderTextColor="#ffffff8c"
+          placeholder="Rua"
+          value={this.state.rua}
+          onChangeText={(rua) => this.setState({ rua })}
+          placeholderTextColor="#666"
         />
         <TextInput
           style={styles.input}
-          placeholder="Curso"
-          value={this.state.curso}
-          onChangeText={(curso) => this.setState({ curso })}
-          placeholderTextColor="#ffffff8c"
+          placeholder="Bairro"
+          value={this.state.bairro}
+          onChangeText={(bairro) => this.setState({ bairro })}
+          placeholderTextColor="#666"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Cidade"
+          value={this.state.cidade}
+          onChangeText={(cidade) => this.setState({ cidade })}
+          placeholderTextColor="#666"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Número"
+          value={this.state.numero}
+          onChangeText={(numero) => this.setState({ numero })}
+          placeholderTextColor="#666"
         />
 
         <TouchableOpacity style={styles.button} onPress={this.handleCadastro}>
@@ -97,16 +107,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    //backgroundColor: "#fff",
+    backgroundColor: "#fff",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#fff",
+    borderColor: "#000",
     borderRadius: 5,
     padding: 10,
     marginVertical: 10,
     width: "80%",
-    color: "#fff",
+    color: "#000",
   },
   button: {
     backgroundColor: "#072336ff",
