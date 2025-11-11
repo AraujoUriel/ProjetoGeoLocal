@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import useLocation from "../hooks/useLocation";
 
 export default function Maps() {
-  const { coords: currentCoords, errorMsg } = useLocation();
+  const { coords, errorMsg } = useLocation();
   const [savedAddress, setSavedAddress] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,24 +27,6 @@ export default function Maps() {
     }
   };
 
-  // Função para gerar coordenadas baseadas no CEP (simulação)
-  const generateCoordinatesFromCEP = (cep) => {
-    if (!cep) return null;
-    
-    // Converter CEP para número para criar variação
-    const cepNum = parseInt(cep.replace(/\D/g, ''), 10) || 1000000;
-    const variation = (cepNum % 10000) / 1000000;
-    
-    // Coordenadas base (centro do Brasil - Brasília)
-    const baseLat = -15.7801;
-    const baseLng = -47.9292;
-    
-    return {
-      latitude: baseLat + (variation * 10) - 5, // Varia entre -20 e -10
-      longitude: baseLng + (variation * 10) - 5, // Varia entre -52 e -42
-    };
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -54,30 +36,27 @@ export default function Maps() {
     );
   }
 
-  if (errorMsg && !currentCoords && !savedAddress) {
+  if (errorMsg) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{errorMsg}</Text>
-        <Text style={styles.errorText}>
-          Não foi possível carregar a localização
-        </Text>
+        {savedAddress && (
+          <View style={styles.addressInfo}>
+            <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
+            <Text style={styles.addressText}>
+              {savedAddress.rua}, {savedAddress.numero}
+            </Text>
+            <Text style={styles.addressText}>
+              {savedAddress.bairro} - {savedAddress.cidade}
+            </Text>
+            <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
+          </View>
+        )}
       </View>
     );
   }
 
-  // Determinar qual coordenada usar
-  let targetCoords = currentCoords;
-  let addressCoords = null;
-
-  if (savedAddress) {
-    addressCoords = generateCoordinatesFromCEP(savedAddress.cep);
-    // Se não temos coordenadas atuais, usar as do endereço
-    if (!targetCoords && addressCoords) {
-      targetCoords = addressCoords;
-    }
-  }
-
-  if (!targetCoords) {
+  if (!coords) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#3498db" />
@@ -91,35 +70,24 @@ export default function Maps() {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: targetCoords.latitude,
-          longitude: targetCoords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
         }}
-        showsUserLocation={!!currentCoords}
+        showsUserLocation={true}
       >
-        {/* Marcador do endereço cadastrado */}
-        {addressCoords && savedAddress && (
-          <Marker
-            coordinate={addressCoords}
-            title="Endereço Cadastrado"
-            description={`${savedAddress.rua}, ${savedAddress.numero}`}
-            pinColor="blue"
-          />
-        )}
-        
-        {/* Marcador da localização atual */}
-        {currentCoords && (
-          <Marker
-            coordinate={currentCoords}
-            title="Sua Localização Atual"
-            description="Localização atual do dispositivo"
-            pinColor="green"
-          />
-        )}
+        <Marker
+          coordinate={{
+            latitude: coords.latitude,
+            longitude: coords.longitude
+          }}
+          title="Você está aqui"
+          description="Sua localização atual"
+        />
       </MapView>
       
-      {/* Informações do endereço */}
+      {/* Informações do endereço cadastrado */}
       {savedAddress && (
         <View style={styles.addressInfo}>
           <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
@@ -130,9 +98,6 @@ export default function Maps() {
             {savedAddress.bairro} - {savedAddress.cidade}
           </Text>
           <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
-          <Text style={styles.noteText}>
-            Localização aproximada baseada no CEP
-          </Text>
         </View>
       )}
     </View>
@@ -162,7 +127,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "red",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 20,
   },
   addressInfo: {
     position: "absolute",
@@ -188,11 +153,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 2,
-  },
-  noteText: {
-    fontSize: 12,
-    color: "#999",
-    fontStyle: "italic",
-    marginTop: 5,
   },
 });
