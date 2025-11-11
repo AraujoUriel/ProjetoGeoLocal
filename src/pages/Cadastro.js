@@ -21,20 +21,13 @@ export default class Cadastro extends Component {
 
   handleCadastro = async () => {
     const { nome, password, cep, rua, bairro, cidade, numero } = this.state;
-    if (!nome || !password || !cep || !rua || !bairro || !cidade || !numero) {
-      alert("Preencha todos os campos!");
+    if (!nome || !password || !cep || !numero) {
+      // exige pelo menos nome, senha, cep e numero (os outros são "enfeite")
+      alert("Preencha pelo menos Nome, Senha, CEP e Número!");
       return;
     }
 
-    const user = {
-      nome,
-      password,
-      cep,
-      rua,
-      bairro,
-      cidade,
-      numero,
-    };
+    const user = { nome, password, cep, rua, bairro, cidade, numero };
 
     try {
       await AsyncStorage.setItem("user", JSON.stringify(user));
@@ -66,30 +59,9 @@ export default class Cadastro extends Component {
         />
         <TextInput
           style={styles.input}
-          placeholder="CEP"
+          placeholder="CEP (ex: 01234-567)"
           value={this.state.cep}
           onChangeText={(cep) => this.setState({ cep })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Rua"
-          value={this.state.rua}
-          onChangeText={(rua) => this.setState({ rua })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Bairro"
-          value={this.state.bairro}
-          onChangeText={(bairro) => this.setState({ bairro })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Cidade"
-          value={this.state.cidade}
-          onChangeText={(cidade) => this.setState({ cidade })}
           placeholderTextColor="#666"
         />
         <TextInput
@@ -99,6 +71,29 @@ export default class Cadastro extends Component {
           onChangeText={(numero) => this.setState({ numero })}
           placeholderTextColor="#666"
         />
+        {/* Campos extras (opcionais) */}
+        <TextInput
+          style={styles.input}
+          placeholder="Rua (opcional)"
+          value={this.state.rua}
+          onChangeText={(rua) => this.setState({ rua })}
+          placeholderTextColor="#666"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Bairro (opcional)"
+          value={this.state.bairro}
+          onChangeText={(bairro) => this.setState({ bairro })}
+          placeholderTextColor="#666"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Cidade (opcional)"
+          value={this.state.cidade}
+          onChangeText={(cidade) => this.setState({ cidade })}
+          placeholderTextColor="#666"
+        />
+
         <TouchableOpacity style={styles.button} onPress={this.handleCadastro}>
           <Text style={styles.buttonText}>Cadastrar</Text>
         </TouchableOpacity>
