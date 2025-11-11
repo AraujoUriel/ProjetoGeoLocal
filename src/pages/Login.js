@@ -1,158 +1,76 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/**
- * Este Maps:
- * - lê o usuário do AsyncStorage ("user")
- * - monta uma query usando SÓ o CEP e o NÚMERO (ex: "01234-567 123")
- * - consulta o Nominatim (OpenStreetMap) para tentar obter lat/lon
- * - exibe um único marcador baseado nesse resultado
- *
- * NÃO usa localização do celular. NÃO usa testCoords.
- */
+export default function Login({ navigation }) {
+  const [nome, setNome] = useState("");
 
-export default function Maps() {
-  const [savedAddress, setSavedAddress] = useState(null);
-  const [addressCoords, setAddressCoords] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const handleLogin = async () => {
+    if (!nome.trim()) {
+      Alert.alert("Informe seu nome", "Digite o nome usado no cadastro.");
+      return;
+    }
 
-  useEffect(() => {
-    const loadAndGeocode = async () => {
-      try {
-        const userString = await AsyncStorage.getItem("user");
-        if (!userString) {
-          setLoading(false);
-          return;
-        }
-
-        const user = JSON.parse(userString);
-        setSavedAddress(user);
-
-        // Monta a query APENAS com CEP e NÚMERO (usuário pediu assim)
-        // Exemplo final: "01234-567 123 Brasil"
-        const cep = (user.cep || "").trim();
-        const numero = (user.numero || "").trim();
-
-        if (!cep || !numero) {
-          console.warn("CEP ou número ausente. Não é possível localizar.");
-          setLoading(false);
-          return;
-        }
-
-        const query = `${cep} ${numero} Brasil`;
-        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=br&limit=1&q=${encodeURIComponent(query)}`;
-
-        // Atenção: Nominatim pede que clientes identifiquem-se via User-Agent.
-        // Aqui definimos um cabeçalho simples.
-        const response = await fetch(url, {
-          headers: {
-            "User-Agent": "MeuAppExemplo/1.0 (contato@exemplo.com)", // opcional, bom para Nominatim
-            "Accept-Language": "pt-BR",
-          },
-        });
-
-        if (!response.ok) {
-          console.warn("Erro na requisição de geocoding:", response.status);
-          setLoading(false);
-          return;
-        }
-
-        const results = await response.json();
-        if (results && results.length > 0) {
-          const r = results[0];
-          const lat = parseFloat(r.lat);
-          const lon = parseFloat(r.lon);
-          setAddressCoords({ latitude: lat, longitude: lon });
-        } else {
-          console.warn("Não foi encontrado resultado no Nominatim para CEP+Número.");
-          // mostra aviso ao usuário (opcional)
-          // Alert.alert("Localização não encontrada", "Não foi possível localizar seu endereço apenas com CEP e número.");
-        }
-      } catch (error) {
-        console.error("Erro ao obter/consultar endereço:", error);
-      } finally {
-        setLoading(false);
+    try {
+      const userString = await AsyncStorage.getItem("user");
+      if (!userString) {
+        Alert.alert("Sem cadastro", "Nenhum usuário cadastrado. Faça o cadastro primeiro.");
+        return;
       }
-    };
-
-    loadAndGeocode();
-  }, []);
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.loadingText}>Buscando endereço...</Text>
-      </View>
-    );
-  }
-
-  if (!savedAddress) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Nenhum usuário logado encontrado.</Text>
-      </View>
-    );
-  }
-
-  if (!addressCoords) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Não foi possível localizar o endereço pelo CEP e número.</Text>
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: "#333" }}>{`${savedAddress.rua || ""} ${savedAddress.numero || ""}`}</Text>
-          <Text style={{ color: "#333" }}>{`${savedAddress.bairro || ""} ${savedAddress.cidade || ""} ${savedAddress.cep || ""}`}</Text>
-        </View>
-      </View>
-    );
-  }
+      const user = JSON.parse(userString);
+      if (user.nome === nome.trim()) {
+        // sucesso
+        navigation.navigate("Maps");
+      } else {
+        Alert.alert("Usuário não encontrado", "O nome informado não bate com o cadastro.");
+      }
+    } catch (err) {
+      console.error("Erro no login:", err);
+      Alert.alert("Erro", "Ocorreu um erro ao tentar logar.");
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: addressCoords.latitude,
-          longitude: addressCoords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-      >
-        <Marker
-          coordinate={addressCoords}
-          title="Endereço do usuário"
-          description={`${savedAddress.cep} • Nº ${savedAddress.numero}`}
-        />
-      </MapView>
+      <Text style={styles.title}>Entrar</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Nome (exatamente como no cadastro)"
+        value={nome}
+        onChangeText={setNome}
+        autoCapitalize="words"
+      />
 
-      <View style={styles.addressInfo}>
-        <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
-        <Text style={styles.addressText}>{savedAddress.rua ? `${savedAddress.rua}, ${savedAddress.numero}` : `Nº ${savedAddress.numero}`}</Text>
-        <Text style={styles.addressText}>{savedAddress.bairro ? `${savedAddress.bairro} - ${savedAddress.cidade || ""}` : (savedAddress.cidade || "")}</Text>
-        <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
-      </View>
+      <TouchableOpacity style={styles.btn} onPress={handleLogin}>
+        <Text style={styles.btnText}>Entrar</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={() => navigation.navigate("Cadastro")}>
+        <Text style={[styles.btnText, { color: "#333" }]}>Ir para Cadastro</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  loadingText: { marginTop: 10, fontSize: 16, textAlign: "center", color: "#333" },
-  errorText: { fontSize: 16, color: "red", textAlign: "center", marginBottom: 6 },
-  addressInfo: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    elevation: 5,
+  container: { flex: 1, padding: 16, justifyContent: "center", backgroundColor: "#fff" },
+  title: { fontSize: 22, fontWeight: "700", marginBottom: 24, textAlign: "center" },
+  input: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
   },
-  addressTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
-  addressText: { fontSize: 14, marginBottom: 2 },
+  btn: {
+    backgroundColor: "#2d98da",
+    height: 46,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  btnText: { color: "#fff", fontWeight: "700" },
+  secondary: { backgroundColor: "#f0f0f0" },
 });

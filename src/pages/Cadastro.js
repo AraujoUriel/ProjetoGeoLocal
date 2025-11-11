@@ -1,110 +1,172 @@
-import React, { Component } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState } from "react";
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
-  Text,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default class Cadastro extends Component {
-  state = {
+/**
+ * Campos salvos: nome, cep, rua, numero, cidade, estado
+ * Busca CEP via ViaCEP (opcional) para preencher rua/cidade/estado
+ */
+
+export default function Cadastro({ navigation }) {
+  const [form, setForm] = useState({
     nome: "",
-    password: "",
     cep: "",
     rua: "",
-    bairro: "",
-    cidade: "",
     numero: "",
+    cidade: "",
+    estado: "",
+  });
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleChange = (field, value) => setForm((p) => ({ ...p, [field]: value }));
+
+  const handleCepSearch = async () => {
+    const cepClean = (form.cep || "").replace(/\D/g, "");
+    if (cepClean.length !== 8) {
+      Alert.alert("CEP inválido", "Informe um CEP com 8 dígitos (somente números).");
+      return;
+    }
+    try {
+      setIsSearchingCep(true);
+      const resp = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
+      const data = await resp.json();
+      if (data.erro) {
+        Alert.alert("CEP não encontrado", "Verifique o CEP e tente novamente.");
+        return;
+      }
+      setForm((p) => ({
+        ...p,
+        cep: cepClean,
+        rua: data.logradouro || p.rua,
+        cidade: data.localidade || p.cidade,
+        estado: data.uf || p.estado,
+      }));
+    } catch (err) {
+      console.error("Erro ViaCEP:", err);
+      Alert.alert("Erro", "Não foi possível consultar o CEP. Verifique sua conexão.");
+    } finally {
+      setIsSearchingCep(false);
+    }
   };
 
-  handleCadastro = async () => {
-    const { nome, password, cep, rua, bairro, cidade, numero } = this.state;
-    if (!nome || !password || !cep || !numero) {
-      // exige pelo menos nome, senha, cep e numero (os outros são "enfeite")
-      alert("Preencha pelo menos Nome, Senha, CEP e Número!");
+  const handleSave = async () => {
+    // exige pelo menos nome, cep e numero (você pediu)
+    if (!form.nome.trim() || !form.cep.trim() || !form.numero.trim()) {
+      Alert.alert("Campos obrigatórios", "Preencha Nome, CEP e Número (pelo menos).");
       return;
     }
 
-    const user = { nome, password, cep, rua, bairro, cidade, numero };
+    const user = {
+      nome: form.nome.trim(),
+      cep: form.cep.trim(),
+      rua: form.rua.trim(),
+      numero: form.numero.trim(),
+      cidade: form.cidade.trim(),
+      estado: form.estado.trim(),
+    };
 
     try {
+      setIsSaving(true);
       await AsyncStorage.setItem("user", JSON.stringify(user));
-      alert("Usuário cadastrado com sucesso!");
-      this.props.navigation.navigate("Login");
-    } catch (error) {
-      console.error("Erro ao salvar usuário:", error);
-      alert("Erro ao cadastrar usuário.");
+      Alert.alert("Sucesso", "Usuário cadastrado com sucesso!");
+      navigation.navigate("Login");
+    } catch (err) {
+      console.error("Erro salvar user:", err);
+      Alert.alert("Erro", "Não foi possível salvar o usuário.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  render() {
-    return (
-      <View style={styles.container}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nome"
-          value={this.state.nome}
-          onChangeText={(nome) => this.setState({ nome })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          value={this.state.password}
-          secureTextEntry
-          onChangeText={(password) => this.setState({ password })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="CEP (ex: 01234-567)"
-          value={this.state.cep}
-          onChangeText={(cep) => this.setState({ cep })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Número"
-          value={this.state.numero}
-          onChangeText={(numero) => this.setState({ numero })}
-          placeholderTextColor="#666"
-        />
-        {/* Campos extras (opcionais) */}
-        <TextInput
-          style={styles.input}
-          placeholder="Rua (opcional)"
-          value={this.state.rua}
-          onChangeText={(rua) => this.setState({ rua })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Bairro (opcional)"
-          value={this.state.bairro}
-          onChangeText={(bairro) => this.setState({ bairro })}
-          placeholderTextColor="#666"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Cidade (opcional)"
-          value={this.state.cidade}
-          onChangeText={(cidade) => this.setState({ cidade })}
-          placeholderTextColor="#666"
-        />
+  return (
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <Text style={styles.title}>Cadastro</Text>
 
-        <TouchableOpacity style={styles.button} onPress={this.handleCadastro}>
-          <Text style={styles.buttonText}>Cadastrar</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Nome"
+        value={form.nome}
+        onChangeText={(t) => handleChange("nome", t)}
+        autoCapitalize="words"
+      />
+
+      <View style={styles.row}>
+        <TextInput
+          style={[styles.input, { flex: 1 }]}
+          placeholder="CEP (ex: 01234567)"
+          value={form.cep}
+          onChangeText={(t) => handleChange("cep", t)}
+          keyboardType="numeric"
+          maxLength={9}
+        />
+        <TouchableOpacity style={styles.cepBtn} onPress={handleCepSearch} disabled={isSearchingCep}>
+          {isSearchingCep ? <ActivityIndicator color="#fff" /> : <Text style={styles.cepBtnText}>Buscar CEP</Text>}
         </TouchableOpacity>
       </View>
-    );
-  }
+
+      <TextInput
+        style={styles.input}
+        placeholder="Rua (opcional)"
+        value={form.rua}
+        onChangeText={(t) => handleChange("rua", t)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Número"
+        value={form.numero}
+        onChangeText={(t) => handleChange("numero", t)}
+        keyboardType="numeric"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Cidade (opcional)"
+        value={form.cidade}
+        onChangeText={(t) => handleChange("cidade", t)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Estado (opcional, ex: SP)"
+        value={form.estado}
+        onChangeText={(t) => handleChange("estado", t)}
+        maxLength={2}
+      />
+
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isSaving}>
+        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Salvar</Text>}
+      </TouchableOpacity>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
-  input: { borderWidth: 1, borderColor: "#000", borderRadius: 5, padding: 10, marginVertical: 5, width: "80%", color: "#000" },
-  button: { backgroundColor: "#072336ff", borderRadius: 5, padding: 10, marginVertical: 10, width: "80%", alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "bold" },
+  container: {
+    padding: 16,
+    paddingTop: 24,
+    backgroundColor: "#fff",
+  },
+  title: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
+  input: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
+  cepBtn: { backgroundColor: "#2d98da", paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 },
+  cepBtnText: { color: "#fff", fontWeight: "700" },
+  saveBtn: { backgroundColor: "#27ae60", height: 46, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  saveText: { color: "#fff", fontWeight: "700" },
 });
