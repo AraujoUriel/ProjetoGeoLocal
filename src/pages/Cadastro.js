@@ -25,6 +25,7 @@ export default class Cadastro extends Component {
       alert("Preencha todos os campos!");
       return;
     }
+
     const user = {
       nome,
       password,
@@ -35,9 +36,14 @@ export default class Cadastro extends Component {
       numero,
     };
 
-    await AsyncStorage.setItem("user", JSON.stringify(user));
-    alert("Usuário cadastrado com sucesso!");
-    this.props.navigation.navigate("Login");
+    try {
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      alert("Usuário cadastrado com sucesso!");
+      this.props.navigation.navigate("Login");
+    } catch (error) {
+      console.error("Erro ao salvar usuário:", error);
+      alert("Erro ao cadastrar usuário.");
+    }
   };
 
   render() {
@@ -54,7 +60,7 @@ export default class Cadastro extends Component {
           style={styles.input}
           placeholder="Senha"
           value={this.state.password}
-          secureTextEntry={true}
+          secureTextEntry
           onChangeText={(password) => this.setState({ password })}
           placeholderTextColor="#666"
         />
@@ -93,7 +99,6 @@ export default class Cadastro extends Component {
           onChangeText={(numero) => this.setState({ numero })}
           placeholderTextColor="#666"
         />
-
         <TouchableOpacity style={styles.button} onPress={this.handleCadastro}>
           <Text style={styles.buttonText}>Cadastrar</Text>
         </TouchableOpacity>
@@ -103,31 +108,8 @@ export default class Cadastro extends Component {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#000",
-    borderRadius: 5,
-    padding: 10,
-    marginVertical: 10,
-    width: "80%",
-    color: "#000",
-  },
-  button: {
-    backgroundColor: "#072336ff",
-    borderRadius: 5,
-    padding: 10,
-    width: "80%",
-    alignItems: "center",
-    marginVertical: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  input: { borderWidth: 1, borderColor: "#000", borderRadius: 5, padding: 10, marginVertical: 5, width: "80%", color: "#000" },
+  button: { backgroundColor: "#072336ff", borderRadius: 5, padding: 10, marginVertical: 10, width: "80%", alignItems: "center" },
+  buttonText: { color: "#fff", fontWeight: "bold" },
 });

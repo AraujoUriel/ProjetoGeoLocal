@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import useLocation from "../hooks/useLocation";
+import useLocation from "../hooks/useLocation"; // seu hook de localização
 
 export default function Maps() {
   const { coords, errorMsg } = useLocation();
@@ -10,22 +10,23 @@ export default function Maps() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadSavedAddress = async () => {
+      try {
+        const userString = await AsyncStorage.getItem("user");
+        console.log("AsyncStorage user:", userString);
+        if (userString) {
+          const user = JSON.parse(userString);
+          setSavedAddress(user);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar endereço:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadSavedAddress();
   }, []);
-
-  const loadSavedAddress = async () => {
-    try {
-      const userString = await AsyncStorage.getItem("user");
-      if (userString) {
-        const user = JSON.parse(userString);
-        setSavedAddress(user);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar endereço:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -43,12 +44,8 @@ export default function Maps() {
         {savedAddress && (
           <View style={styles.addressInfo}>
             <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
-            <Text style={styles.addressText}>
-              {savedAddress.rua}, {savedAddress.numero}
-            </Text>
-            <Text style={styles.addressText}>
-              {savedAddress.bairro} - {savedAddress.cidade}
-            </Text>
+            <Text style={styles.addressText}>{savedAddress.rua}, {savedAddress.numero}</Text>
+            <Text style={styles.addressText}>{savedAddress.bairro} - {savedAddress.cidade}</Text>
             <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
           </View>
         )}
@@ -75,60 +72,35 @@ export default function Maps() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
-        showsUserLocation={true}
+        showsUserLocation
       >
         <Marker
-          coordinate={{
-            latitude: coords.latitude,
-            longitude: coords.longitude
-          }}
+          coordinate={{ latitude: coords.latitude, longitude: coords.longitude }}
           title="Você está aqui"
           description="Sua localização atual"
         />
       </MapView>
-      
-      {/* Informações do endereço cadastrado */}
-      {savedAddress && (
+
+      {savedAddress ? (
         <View style={styles.addressInfo}>
           <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
-          <Text style={styles.addressText}>
-            {savedAddress.rua}, {savedAddress.numero}
-          </Text>
-          <Text style={styles.addressText}>
-            {savedAddress.bairro} - {savedAddress.cidade}
-          </Text>
+          <Text style={styles.addressText}>{savedAddress.rua}, {savedAddress.numero}</Text>
+          <Text style={styles.addressText}>{savedAddress.bairro} - {savedAddress.cidade}</Text>
           <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
         </View>
+      ) : (
+        <Text style={{position:'absolute', bottom:20, left:20, color:'#333'}}>Nenhum endereço cadastrado</Text>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    textAlign: "center",
-    color: "#333",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "red",
-    textAlign: "center",
-    marginBottom: 20,
-  },
+  container: { flex: 1 },
+  map: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  loadingText: { marginTop: 10, fontSize: 16, textAlign: "center", color: "#333" },
+  errorText: { fontSize: 16, color: "red", textAlign: "center", marginBottom: 20 },
   addressInfo: {
     position: "absolute",
     bottom: 20,
@@ -143,15 +115,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  addressTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#333",
-  },
-  addressText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 2,
-  },
+  addressTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 5, color: "#333" },
+  addressText: { fontSize: 14, color: "#666", marginBottom: 2 },
 });
