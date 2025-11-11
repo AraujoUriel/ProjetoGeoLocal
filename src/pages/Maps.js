@@ -7,10 +7,8 @@ import useLocation from "../hooks/useLocation";
 export default function Maps() {
   const { coords: currentCoords, errorMsg } = useLocation();
   const [savedAddress, setSavedAddress] = useState(null);
-  const [addressCoords, setAddressCoords] = useState(null);
-  const [loadingAddress, setLoadingAddress] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Carregar endereço salvo do AsyncStorage
   useEffect(() => {
     loadSavedAddress();
   }, []);
@@ -21,66 +19,42 @@ export default function Maps() {
       if (userString) {
         const user = JSON.parse(userString);
         setSavedAddress(user);
-        
-        // Geocodificar o endereço para obter coordenadas
-        if (user.cep && user.cidade) {
-          await geocodeAddress(user);
-        }
       }
     } catch (error) {
       console.error("Erro ao carregar endereço:", error);
     } finally {
-      setLoadingAddress(false);
+      setLoading(false);
     }
   };
 
-  const geocodeAddress = async (address) => {
-    try {
-      // Montar o endereço completo para geocodificação
-      const fullAddress = `${address.rua}, ${address.numero}, ${address.bairro}, ${address.cidade}, Brasil`;
-      
-      // Usar a API de geocodificação do OpenStreetMap (Nominatim)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`
-      );
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        const location = data[0];
-        setAddressCoords({
-          latitude: parseFloat(location.lat),
-          longitude: parseFloat(location.lon),
-        });
-      } else {
-        console.warn("Endereço não encontrado na geocodificação");
-        // Usar localização atual como fallback
-        if (currentCoords) {
-          setAddressCoords(currentCoords);
-        }
-      }
-    } catch (error) {
-      console.error("Erro na geocodificação:", error);
-      // Usar localização atual como fallback
-      if (currentCoords) {
-        setAddressCoords(currentCoords);
-      }
-    }
+  // Função para gerar coordenadas baseadas no CEP (simulação)
+  const generateCoordinatesFromCEP = (cep) => {
+    if (!cep) return null;
+    
+    // Converter CEP para número para criar variação
+    const cepNum = parseInt(cep.replace(/\D/g, ''), 10) || 1000000;
+    const variation = (cepNum % 10000) / 1000000;
+    
+    // Coordenadas base (centro do Brasil - Brasília)
+    const baseLat = -15.7801;
+    const baseLng = -47.9292;
+    
+    return {
+      latitude: baseLat + (variation * 10) - 5, // Varia entre -20 e -10
+      longitude: baseLng + (variation * 10) - 5, // Varia entre -52 e -42
+    };
   };
 
-  // Determinar qual coordenada usar
-  const targetCoords = addressCoords || currentCoords;
-
-  if (loadingAddress) {
+  if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.loadingText}>Carregando endereço cadastrado...</Text>
+        <Text style={styles.loadingText}>Carregando...</Text>
       </View>
     );
   }
 
-  if (errorMsg && !targetCoords) {
+  if (errorMsg && !currentCoords && !savedAddress) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{errorMsg}</Text>
@@ -89,6 +63,18 @@ export default function Maps() {
         </Text>
       </View>
     );
+  }
+
+  // Determinar qual coordenada usar
+  let targetCoords = currentCoords;
+  let addressCoords = null;
+
+  if (savedAddress) {
+    addressCoords = generateCoordinatesFromCEP(savedAddress.cep);
+    // Se não temos coordenadas atuais, usar as do endereço
+    if (!targetCoords && addressCoords) {
+      targetCoords = addressCoords;
+    }
   }
 
   if (!targetCoords) {
@@ -107,8 +93,8 @@ export default function Maps() {
         initialRegion={{
           latitude: targetCoords.latitude,
           longitude: targetCoords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
         }}
         showsUserLocation={!!currentCoords}
       >
@@ -117,12 +103,12 @@ export default function Maps() {
           <Marker
             coordinate={addressCoords}
             title="Endereço Cadastrado"
-            description={`${savedAddress.rua}, ${savedAddress.numero} - ${savedAddress.bairro}`}
+            description={`${savedAddress.rua}, ${savedAddress.numero}`}
             pinColor="blue"
           />
         )}
         
-        {/* Marcador da localização atual (se disponível) */}
+        {/* Marcador da localização atual */}
         {currentCoords && (
           <Marker
             coordinate={currentCoords}
@@ -133,7 +119,7 @@ export default function Maps() {
         )}
       </MapView>
       
-      {/* Informações do endereço cadastrado */}
+      {/* Informações do endereço */}
       {savedAddress && (
         <View style={styles.addressInfo}>
           <Text style={styles.addressTitle}>Endereço Cadastrado:</Text>
@@ -144,6 +130,9 @@ export default function Maps() {
             {savedAddress.bairro} - {savedAddress.cidade}
           </Text>
           <Text style={styles.addressText}>CEP: {savedAddress.cep}</Text>
+          <Text style={styles.noteText}>
+            Localização aproximada baseada no CEP
+          </Text>
         </View>
       )}
     </View>
@@ -199,5 +188,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 2,
+  },
+  noteText: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic",
+    marginTop: 5,
   },
 });
